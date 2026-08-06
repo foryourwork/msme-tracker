@@ -11,11 +11,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// KeepAlive Agents for Maximum Throughput
-const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
-const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 20 });
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 20 });
 
-// Dynamic User Agents
 const USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -29,40 +27,40 @@ const getRandomHeader = () => ({
     'User-Agent': USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
 });
 
+// Increased timeout to 25 seconds for slow Government Server
 const axiosClient = axios.create({
-    timeout: 12000,
+    timeout: 25000,
     httpAgent,
     httpsAgent
 });
 
 axiosRetry(axiosClient, {
-    retries: 2,
-    retryDelay: (retryCount) => retryCount * 1000,
+    retries: 3,
+    retryDelay: (retryCount) => retryCount * 1500,
     retryCondition: (error) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
-               (error.response && [429, 500, 502, 503, 504].includes(error.response.status));
+               (error.response && [429, 500, 502, 503, 504].includes(error.response.status)) ||
+               error.code === 'ECONNABORTED';
     }
 });
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const tradeMap = { '1': 'Halwai (हलवाई)' };
 
-// Render पर index.html सीधे इसी Server से सर्व करने के लिए
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Primary Tracking API
 app.post('/api/track', async (req, res) => {
     const appId = req.body && req.body.app_id ? req.body.app_id.toString().trim() : '';
-    if (!appId) return res.status(400).json({ status: 'error', message: 'Invalid Application ID' });
+    if (!appId) return res.json({ status: 'error', message: 'Invalid Application ID' });
 
     try {
-        await sleep(Math.floor(Math.random() * 15) + 10);
+        // Random Human Delay between requests
+        await sleep(Math.floor(Math.random() * 300) + 200);
 
-        // Fetch Main Status
         const statusResponse = await axiosClient.post(
             'https://msme.up.gov.in/Home/Get_ApplicationStatusData',
             new URLSearchParams({ username: appId }),
@@ -81,7 +79,6 @@ app.post('/api/track', async (req, res) => {
 
         let rawTrade = (statusData.trade_code || statusData.trade_id || statusData.trade_name || statusData.Trade || '').toString().trim();
 
-        // Secondary Scraping if trade is missing
         if (!rawTrade || rawTrade === 'N/A' || rawTrade === 'NA') {
             try {
                 const printResponse = await axiosClient.post(
@@ -112,12 +109,12 @@ app.post('/api/track', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error("Backend Error for App ID:", appId, err.message);
-        return res.status(500).json({ status: 'error', message: 'MSME Portal Error: ' + err.message });
+        console.error(`Error for App ID ${appId}:`, err.message);
+        // Safe Return to prevent 500 HTML response
+        return res.json({ status: 'error', message: 'Portal Timed Out / Busy' });
     }
 });
 
-// Dynamic Port Binding for Render
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server Active on Port ${PORT}`);
