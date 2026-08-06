@@ -5,22 +5,21 @@ const axiosRetry = require('axios-retry').default;
 const cheerio = require('cheerio');
 const http = require('http');
 const https = require('https');
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Continuous Connection Reuse Agents
+// KeepAlive Agents for Maximum Throughput
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
-// Dynamic User Agents for Anti-Bot Bypass
+// Dynamic User Agents
 const USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
 ];
 
 const getRandomHeader = () => ({
@@ -30,14 +29,12 @@ const getRandomHeader = () => ({
     'User-Agent': USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
 });
 
-// Configure Axios Instance with Auto-Retry
 const axiosClient = axios.create({
-    timeout: 10000,
+    timeout: 12000,
     httpAgent,
     httpsAgent
 });
 
-// AUTO-RETRY LOGIC
 axiosRetry(axiosClient, {
     retries: 2,
     retryDelay: (retryCount) => retryCount * 1000,
@@ -50,19 +47,22 @@ axiosRetry(axiosClient, {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const tradeMap = { '1': 'Halwai (हलवाई)' };
 
-// Health Check Endpoint (For Render & UptimeRobot Ping)
+// Render पर index.html सीधे इसी Server से सर्व करने के लिए
+app.use(express.static(path.join(__dirname)));
+
 app.get('/', (req, res) => {
-    res.send("MSME Sync Engine Server is Running Healthy!");
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Primary Tracking API
 app.post('/api/track', async (req, res) => {
-    const appId = req.body.app_id ? req.body.app_id.toString().trim() : '';
-    if (!appId) return res.json({ status: 'error', message: 'Invalid Application ID' });
+    const appId = req.body && req.body.app_id ? req.body.app_id.toString().trim() : '';
+    if (!appId) return res.status(400).json({ status: 'error', message: 'Invalid Application ID' });
 
     try {
         await sleep(Math.floor(Math.random() * 15) + 10);
 
-        // 1. Get Application Status
+        // Fetch Main Status
         const statusResponse = await axiosClient.post(
             'https://msme.up.gov.in/Home/Get_ApplicationStatusData',
             new URLSearchParams({ username: appId }),
@@ -81,7 +81,7 @@ app.post('/api/track', async (req, res) => {
 
         let rawTrade = (statusData.trade_code || statusData.trade_id || statusData.trade_name || statusData.Trade || '').toString().trim();
 
-        // 2. Secondary HTML Scraping if Trade Name Missing
+        // Secondary Scraping if trade is missing
         if (!rawTrade || rawTrade === 'N/A' || rawTrade === 'NA') {
             try {
                 const printResponse = await axiosClient.post(
@@ -112,15 +112,13 @@ app.post('/api/track', async (req, res) => {
             }
         });
     } catch (err) {
-        return res.json({ status: 'error', message: 'Server Connection Error: ' + err.message });
+        console.error("Backend Error for App ID:", appId, err.message);
+        return res.status(500).json({ status: 'error', message: 'MSME Portal Error: ' + err.message });
     }
 });
 
-// Dynamic Port Assignment for Render Cloud Hosting
+// Dynamic Port Binding for Render
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, '0.0.0.0', () => {
-    console.log("---------------------------------------------------------");
-    console.log(`20 Req/Sec Ultra Engine Active on Port ${PORT}`);
-    console.log("---------------------------------------------------------");
+    console.log(`Server Active on Port ${PORT}`);
 });
