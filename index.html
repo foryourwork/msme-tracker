@@ -3,38 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk MSME Sync Pro | PWA Turbo Engine</title>
+    <title>Bulk MSME Sync Pro | 20 Req/Sec Turbo Engine</title>
     
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MSME Sync">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/906/906343.png">
-
-    <!-- Embedded Dynamic Web App Manifest -->
-    <link rel="manifest" href='data:application/manifest+json,{
-        "name": "Bulk MSME Sync Pro",
-        "short_name": "MSME Sync",
-        "start_url": "./",
-        "display": "standalone",
-        "background_color": "#f8fafc",
-        "theme_color": "#0f172a",
-        "description": "20 Req/Sec Ultra MSME Sync Engine",
-        "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/906/906343.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/906/906343.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
-    }'>
-
     <!-- External Libraries -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -124,9 +94,6 @@
         .reset-btn { background: #ef4444; color: white; display: none; }
         .reset-btn:hover { background: #dc2626; transform: translateY(-2px); }
 
-        .install-btn { background: #8b5cf6; color: white; display: none; }
-        .install-btn:hover { background: #7c3aed; transform: translateY(-2px); }
-
         .progress-container { margin-top: 25px; display: none; }
 
         .progress-bar { 
@@ -213,8 +180,8 @@
 <body>
 
 <div class="header">
-    <h2 class="fw-bold"><i class="fas fa-bolt me-2"></i>AMAN BULK LIVE SYNC v5.0 (PWA Enabled)</h2>
-    <p>UP MSME Portal Pipeline & Billing Engine with Progressive Web App Support</p>
+    <h2 class="fw-bold"><i class="fas fa-bolt me-2"></i>AMAN BULK LIVE SYNC v4.0 (20 Req/Sec Turbo Engine)</h2>
+    <p>UP MSME Portal Pipeline & Billing Engine with Auto-Retry Protection</p>
 </div>
 
 <div class="container">
@@ -235,11 +202,6 @@
 
             <button id="resetBtn" class="action-btn reset-btn" onclick="resetEngine()">
                 <i class="fas fa-rotate-right"></i> नया डेटा ट्रैक करें
-            </button>
-
-            <!-- PWA INSTALL APP BUTTON -->
-            <button id="installAppBtn" class="action-btn install-btn">
-                <i class="fas fa-download"></i> Install App
             </button>
         </div>
 
@@ -275,48 +237,6 @@
 </div>
 
 <script>
-// --- PWA SERVICE WORKER REGISTRATION ---
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        const swCode = `
-            const CACHE_NAME = 'msme-pwa-v1';
-            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-            self.addEventListener('fetch', e => {
-                if (e.request.method === 'GET') {
-                    e.respondWith(
-                        fetch(e.request).catch(() => caches.match(e.request))
-                    );
-                }
-            });
-        `;
-        const blob = new Blob([swCode], { type: 'text/javascript' });
-        const swUrl = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Error:', err));
-    });
-}
-
-// --- PWA INSTALL PROMPT LOGIC ---
-let deferredPrompt;
-const installAppBtn = document.getElementById('installAppBtn');
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installAppBtn.style.display = 'inline-flex';
-});
-
-installAppBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            installAppBtn.style.display = 'none';
-        }
-        deferredPrompt = null;
-    }
-});
-
 // --- FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyBfAuBYPAbcxctTQjiRF3TwPE3eNNwYwxk",
