@@ -3,8 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk MSME Sync Pro | 20 Req/Sec Turbo Engine</title>
+    <title>Bulk MSME Sync Pro | 20 Req/Sec Cloud Engine</title>
     
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MSME Sync">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/906/906343.png">
+
+    <!-- Embedded Dynamic Web App Manifest -->
+    <link rel="manifest" href='data:application/manifest+json,{
+        "name": "Bulk MSME Sync Pro",
+        "short_name": "MSME Sync",
+        "start_url": "./",
+        "display": "standalone",
+        "background_color": "#f8fafc",
+        "theme_color": "#0f172a",
+        "description": "20 Req/Sec Ultra MSME Cloud Sync Engine",
+        "icons": [
+            {
+                "src": "https://cdn-icons-png.flaticon.com/512/906/906343.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": "https://cdn-icons-png.flaticon.com/512/906/906343.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    }'>
+
     <!-- External Libraries -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -15,7 +45,7 @@
     
     <script>
         if (!sessionStorage.getItem('activeUser')) {
-            sessionStorage.setItem('activeUser', JSON.stringify({ name: "Localhost Admin", role: "Direct Access" }));
+            sessionStorage.setItem('activeUser', JSON.stringify({ name: "Cloud Admin", role: "Direct Access" }));
         }
     </script>
 
@@ -93,6 +123,9 @@
 
         .reset-btn { background: #ef4444; color: white; display: none; }
         .reset-btn:hover { background: #dc2626; transform: translateY(-2px); }
+
+        .install-btn { background: #8b5cf6; color: white; display: none; }
+        .install-btn:hover { background: #7c3aed; transform: translateY(-2px); }
 
         .progress-container { margin-top: 25px; display: none; }
 
@@ -180,8 +213,8 @@
 <body>
 
 <div class="header">
-    <h2 class="fw-bold"><i class="fas fa-bolt me-2"></i>AMAN BULK LIVE SYNC v4.0 (20 Req/Sec Turbo Engine)</h2>
-    <p>UP MSME Portal Pipeline & Billing Engine with Auto-Retry Protection</p>
+    <h2 class="fw-bold"><i class="fas fa-bolt me-2"></i>AMAN BULK LIVE SYNC v5.0 (Render Cloud Engine)</h2>
+    <p>UP MSME Portal Pipeline & Billing Engine | 100% Standalone Cloud Sync</p>
 </div>
 
 <div class="container">
@@ -203,11 +236,16 @@
             <button id="resetBtn" class="action-btn reset-btn" onclick="resetEngine()">
                 <i class="fas fa-rotate-right"></i> नया डेटा ट्रैक करें
             </button>
+
+            <!-- PWA INSTALL APP BUTTON -->
+            <button id="installAppBtn" class="action-btn install-btn">
+                <i class="fas fa-download"></i> Install App
+            </button>
         </div>
 
         <div class="progress-container" id="progBox">
             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span id="p_status" style="font-weight: 700; color: #2563eb; font-size: 14px;">Initializing Turbo Engine...</span>
+                <span id="p_status" style="font-weight: 700; color: #2563eb; font-size: 14px;">Connecting to Render Cloud Server...</span>
                 <span id="p_percent" style="font-weight: 700; font-size: 14px;">0%</span>
             </div>
             <div class="progress-bar"><div id="fill"></div></div>
@@ -237,6 +275,41 @@
 </div>
 
 <script>
+// --- PWA SERVICE WORKER ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        const swCode = `
+            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+            self.addEventListener('fetch', e => {
+                if (e.request.method === 'GET') {
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                }
+            });
+        `;
+        const blob = new Blob([swCode], { type: 'text/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Error:', err));
+    });
+}
+
+let deferredPrompt;
+const installAppBtn = document.getElementById('installAppBtn');
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installAppBtn.style.display = 'inline-flex';
+});
+
+installAppBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') installAppBtn.style.display = 'none';
+        deferredPrompt = null;
+    }
+});
+
 // --- FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyBfAuBYPAbcxctTQjiRF3TwPE3eNNwYwxk",
@@ -251,10 +324,10 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let syncData = [];
-const activeUser = JSON.parse(sessionStorage.getItem('activeUser')) || { name: "Localhost Admin" };
+const activeUser = JSON.parse(sessionStorage.getItem('activeUser')) || { name: "Cloud Admin" };
 
-// रिलेटिव पाथ - सर्वर खुद पहचानेगा कि इसे Render या Localhost पर चलना है
-const API_URL = "/api/track";
+// EXACT RENDER LIVE BACKEND URL (आपके कंप्यूटर पर निर्भरता पूरी तरह समाप्त)
+const API_URL = "https://msme-tracker.onrender.com/api/track";
 
 function downloadSampleExcel() {
     const sampleData = [
@@ -285,12 +358,30 @@ document.getElementById('excelInput').addEventListener('change', function(e) {
     reader.readAsArrayBuffer(e.target.files[0]);
 });
 
+// Helper for Render Cold-Start Timeout Retry
+async function fetchWithRetry(url, options, retries = 3) {
+    for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per batch item
+            
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (res.ok) return res;
+        } catch (err) {
+            if (attempt === retries - 1) throw err;
+            document.getElementById('p_status').innerText = `Waking up Render Cloud Server... (Attempt ${attempt + 2})`;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+}
+
 async function processRows(rows) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
     let count = 0;
 
-    // --- BATCH_SIZE = 20 (20 Requests Parallel) ---
     const BATCH_SIZE = 20;
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -307,15 +398,11 @@ async function processRows(rows) {
             document.getElementById('p_status').innerText = `Syncing Batch (${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}): ${appId}`;
 
             try {
-                const res = await fetch(API_URL, {
+                const res = await fetchWithRetry(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ app_id: appId })
                 });
-
-                if (!res.ok) {
-                    throw new Error(`Server Response Error: ${res.status}`);
-                }
 
                 const result = await res.json();
 
@@ -331,7 +418,7 @@ async function processRows(rows) {
 
                     syncData.push(info);
 
-                    // Non-blocking Firebase Sync
+                    // Background Firebase Sync
                     db.ref(`absent_sync_pipeline/${info.App_Id}`).set({
                         applicant_name: info.applicant_name,
                         scheme_name: info.scheme_name,
@@ -369,12 +456,12 @@ async function processRows(rows) {
                     `);
                 }
             } catch (err) {
-                console.error("API Fetch Error:", err);
+                console.error("Cloud Fetch Error:", err);
                 tbody.insertAdjacentHTML('beforeend', `
                     <tr>
                         <td><b>${index + 1}</b></td>
                         <td style="color: var(--accent); font-weight: 800;">${appId}</td>
-                        <td colspan="6" style="color: #ef4444;">Server Error</td>
+                        <td colspan="6" style="color: #ef4444;">Render Server Connecting/Timeout</td>
                         <td><span class="badge-danger"><i class="fas fa-times me-1"></i> Failed</span></td>
                     </tr>
                 `);
@@ -394,7 +481,7 @@ async function processRows(rows) {
     
     Swal.fire({
         title: "Sync Processed!",
-        text: `${count} Records Synced at 20 Req/Sec Turbo Speed!`,
+        text: `${count} Records Synced via Render Cloud Server!`,
         icon: "success",
         confirmButtonColor: "#2563eb"
     });
@@ -407,7 +494,7 @@ function resetEngine() {
     document.getElementById('progBox').style.display = 'none';
     document.getElementById('fill').style.width = '0%';
     document.getElementById('p_percent').innerText = '0%';
-    document.getElementById('p_status').innerText = 'Initializing Turbo Engine...';
+    document.getElementById('p_status').innerText = 'Connecting to Render Cloud Server...';
     document.getElementById('downloadBtn').style.display = 'none';
     document.getElementById('resetBtn').style.display = 'none';
 }
