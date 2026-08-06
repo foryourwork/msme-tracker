@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk MSME Sync Pro | 20 Req/Sec Turbo Engine</title>
+    
+    <!-- External Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        if (!sessionStorage.getItem('activeUser')) {
+            sessionStorage.setItem('activeUser', JSON.stringify({ name: "Localhost Admin", role: "Direct Access" }));
+        }
+    </script>
+
+    <style>
+        :root { 
+            --primary: #0f172a; 
+            --accent: #2563eb; 
+            --accent-hover: #1d4ed8;
+            --bg: #f8fafc; 
+            --card-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --text-main: #1e293b;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+            margin: 0; 
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .header { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: white; 
+            padding: 35px 20px; 
+            text-align: center; 
+            border-bottom: 5px solid var(--accent); 
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        .container { 
+            max-width: 1400px; 
+            margin: -30px auto 50px; 
+            padding: 0 20px; 
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.08); 
+            border: 2px solid var(--border-color); 
+            margin-bottom: 25px; 
+        }
+
+        .btn-group { 
+            display: flex; 
+            gap: 15px; 
+            justify-content: center; 
+            flex-wrap: wrap; 
+        }
+
+        .action-btn {
+            padding: 12px 28px; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 0.95rem;
+            transition: all 0.3s ease; 
+            border: none; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn { background: var(--accent); color: white; }
+        .upload-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+        .sample-btn { background: #475569; color: white; }
+        .sample-btn:hover { background: #334155; transform: translateY(-2px); }
+
+        .download-btn { background: #10b981; color: white; display: none; }
+        .download-btn:hover { background: #059669; transform: translateY(-2px); }
+
+        .reset-btn { background: #ef4444; color: white; display: none; }
+        .reset-btn:hover { background: #dc2626; transform: translateY(-2px); }
+
+        .progress-container { margin-top: 25px; display: none; }
+
+        .progress-bar { 
+            height: 14px; 
+            background: #e2e8f0; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-top: 10px; 
+            border: 1px solid #cbd5e1;
+        }
+
+        #fill { 
+            width: 0%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #2563eb, #3b82f6); 
+            transition: width 0.2s ease; 
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            border: 2px solid var(--border-color);
+        }
+
+        table { width: 100%; border-collapse: collapse; background: white; }
+
+        th { 
+            background: #0f172a; 
+            color: white; 
+            padding: 16px; 
+            text-align: left; 
+            font-size: 13px; 
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 3px solid #334155;
+        }
+
+        td { 
+            padding: 16px; 
+            border-bottom: 2px solid var(--border-color); 
+            font-size: 13.5px; 
+            color: #334155;
+            font-weight: 600;
+        }
+
+        tr:hover { background-color: #f8fafc; }
+
+        .badge-scheme {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #fcd34d;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .trade-badge {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .status-pill { 
+            padding: 6px 14px; 
+            border-radius: 50px; 
+            font-size: 11px; 
+            font-weight: 800; 
+            background: #eff6ff; 
+            color: #1d4ed8; 
+            border: 1.5px solid #93c5fd; 
+            display: inline-block;
+        }
+
+        .badge-success { color: #166534; background: #f0fdf4; border: 1px solid #86efac; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
+        .badge-danger { color: #991b1b; background: #fef2f2; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 class="fw-bold"><i class="fas fa-bolt me-2"></i>AMAN BULK LIVE SYNC v4.0 (20 Req/Sec Turbo Engine)</h2>
+    <p>UP MSME Portal Pipeline & Billing Engine with Auto-Retry Protection</p>
+</div>
+
+<div class="container">
+    <div class="card text-center">
+        <div class="btn-group">
+            <button class="action-btn sample-btn" onclick="downloadSampleExcel()">
+                <i class="fas fa-file-excel"></i> Sample Excel
+            </button>
+            
+            <input type="file" id="excelInput" style="display:none" accept=".xlsx">
+            <label for="excelInput" class="action-btn upload-btn">
+                <i class="fas fa-file-upload"></i> Upload Excel
+            </label>
+
+            <button id="downloadBtn" class="action-btn download-btn" onclick="downloadData()">
+                <i class="fas fa-file-download"></i> Download Full MIS Report
+            </button>
+
+            <button id="resetBtn" class="action-btn reset-btn" onclick="resetEngine()">
+                <i class="fas fa-rotate-right"></i> नया डेटा ट्रैक करें
+            </button>
+        </div>
+
+        <div class="progress-container" id="progBox">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span id="p_status" style="font-weight: 700; color: #2563eb; font-size: 14px;">Initializing Turbo Engine...</span>
+                <span id="p_percent" style="font-weight: 700; font-size: 14px;">0%</span>
+            </div>
+            <div class="progress-bar"><div id="fill"></div></div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>App ID</th>
+                    <th>आवेदक का नाम</th>
+                    <th>योजना का नाम</th>
+                    <th>पारंपरिक व्यवसाय (Trade)</th>
+                    <th>जिला</th>
+                    <th>मोबाइल नंबर</th>
+                    <th>वर्तमान स्थिति</th>
+                    <th>Pipeline Sync</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="9" style="text-align: center; padding: 40px; color: #64748b; font-weight: 600;">कृपया Excel फ़ाइल अपलोड करें...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// --- FIREBASE CONFIG ---
+const firebaseConfig = {
+    apiKey: "AIzaSyBfAuBYPAbcxctTQjiRF3TwPE3eNNwYwxk",
+    authDomain: "dbform-db4c9.firebaseapp.com",
+    databaseURL: "https://dbform-db4c9-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "dbform-db4c9",
+    storageBucket: "dbform-db4c9.firebasestorage.app",
+    messagingSenderId: "930632470946",
+    appId: "1:930632470946:web:c87062b66c96ee6e5762fb"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let syncData = [];
+const activeUser = JSON.parse(sessionStorage.getItem('activeUser')) || { name: "Localhost Admin" };
+
+function downloadSampleExcel() {
+    const sampleData = [
+        { "App No": "26271416657501" },
+        { "App No": "26271416657502" }
+    ];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sample_Input");
+    XLSX.writeFile(wb, "Sample_MSME_Input.xlsx");
+}
+
+document.getElementById('excelInput').addEventListener('change', function(e) {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        const data = new Uint8Array(event.target.result);
+        const wb = XLSX.read(data, {type: 'array'});
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        
+        if(rows.length > 0) {
+            document.getElementById('progBox').style.display = 'block';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+            syncData = []; 
+            await processRows(rows);
+        }
+    };
+    reader.readAsArrayBuffer(e.target.files[0]);
+});
+
+async function processRows(rows) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    let count = 0;
+
+    // --- BATCH_SIZE = 20 (20 Requests Parallel for Ultra Speed) ---
+    const BATCH_SIZE = 20;
+
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+
+        const promises = batch.map(async (row, indexInBatch) => {
+            const index = i + indexInBatch;
+            const appId = row['App No'] || row['Application Number'] || row['app_id'] || row['App_Id'] || Object.values(row)[0];
+            const excelTrade = row['Trade'] || row['trade'] || row['व्यवसाय'] || '';
+            const excelDistrict = row['District'] || row['district'] || row['जिला'] || '';
+
+            if (!appId) return;
+
+            document.getElementById('p_status').innerText = `Syncing Batch (${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}): ${appId}`;
+
+            try {
+                const res = await fetch('http://localhost:5000/api/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ app_id: appId })
+                });
+                const result = await res.json();
+
+                if (result.info) {
+                    const info = result.info;
+
+                    if ((!info.trade_name || info.trade_name === 'NA' || info.trade_name === 'N/A') && excelTrade) {
+                        info.trade_name = (String(excelTrade).trim() === '1') ? 'Halwai (हलवाई)' : 'NA';
+                    }
+                    if ((!info.district_name || info.district_name === 'N/A') && excelDistrict) {
+                        info.district_name = excelDistrict;
+                    }
+
+                    syncData.push(info);
+
+                    // Firebase Sync Background Execution
+                    db.ref(`absent_sync_pipeline/${info.App_Id}`).set({
+                        applicant_name: info.applicant_name,
+                        scheme_name: info.scheme_name,
+                        trade_name: info.trade_name,
+                        district_name: info.district_name,
+                        portal_status: info.status_str,
+                        sync_time: new Date().toLocaleString(),
+                        payment_status: 'Unpaid',
+                        manager_name: activeUser.name,
+                        mobile: info.mobile_no || ""
+                    });
+
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td><b>${index + 1}</b></td>
+                            <td style="color: var(--accent); font-weight: 800;">${info.App_Id}</td>
+                            <td>${info.applicant_name}</td>
+                            <td><span class="badge-scheme"><i class="fas fa-bookmark me-1"></i>${info.scheme_name}</span></td>
+                            <td><span class="trade-badge"><i class="fas fa-tools me-1"></i>${info.trade_name}</span></td>
+                            <td><b>${info.district_name}</b></td>
+                            <td>${info.mobile_no || 'N/A'}</td>
+                            <td><span class="status-pill">${info.status_str}</span></td>
+                            <td><span class="badge-success"><i class="fas fa-check-double me-1"></i> Synced</span></td>
+                        </tr>
+                    `);
+                    count++;
+                } else {
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td><b>${index + 1}</b></td>
+                            <td style="color: var(--accent); font-weight: 800;">${appId}</td>
+                            <td colspan="6" style="color: #ef4444;">${result.message || 'Record Not Found'}</td>
+                            <td><span class="badge-danger"><i class="fas fa-times me-1"></i> Failed</span></td>
+                        </tr>
+                    `);
+                }
+            } catch (err) {
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr>
+                        <td><b>${index + 1}</b></td>
+                        <td style="color: var(--accent); font-weight: 800;">${appId}</td>
+                        <td colspan="6" style="color: #ef4444;">Server Error</td>
+                        <td><span class="badge-danger"><i class="fas fa-times me-1"></i> Failed</span></td>
+                    </tr>
+                `);
+            }
+        });
+
+        await Promise.all(promises);
+
+        const percent = Math.round((Math.min(i + BATCH_SIZE, rows.length) / rows.length) * 100);
+        document.getElementById('fill').style.width = percent + '%';
+        document.getElementById('p_percent').innerText = percent + '%';
+    }
+
+    document.getElementById('p_status').innerText = "Bulk Sync Complete!";
+    document.getElementById('downloadBtn').style.display = 'inline-flex';
+    document.getElementById('resetBtn').style.display = 'inline-flex';
+    
+    Swal.fire({
+        title: "Sync Processed!",
+        text: `${count} Records Synced at 20 Req/Sec Turbo Speed!`,
+        icon: "success",
+        confirmButtonColor: "#2563eb"
+    });
+}
+
+function resetEngine() {
+    syncData = [];
+    document.getElementById('excelInput').value = '';
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #64748b; font-weight: 600;">कृपया Excel फ़ाइल अपलोड करें...</td></tr>';
+    document.getElementById('progBox').style.display = 'none';
+    document.getElementById('fill').style.width = '0%';
+    document.getElementById('p_percent').innerText = '0%';
+    document.getElementById('p_status').innerText = 'Initializing Turbo Engine...';
+    document.getElementById('downloadBtn').style.display = 'none';
+    document.getElementById('resetBtn').style.display = 'none';
+}
+
+function downloadData() {
+    if(syncData.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(syncData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Portal_Sync_Report");
+    XLSX.writeFile(wb, `Bulk_MSME_Report_${Date.now()}.xlsx`);
+}
+</script>
+</body>
+</html>
