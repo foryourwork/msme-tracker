@@ -15,10 +15,6 @@ app.use(express.json());
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
-// OPTIONAL: Proxy Rotation Config (यदि आप Paid/Free Proxies लिस्ट यूज़ कर रहे हैं)
-// const PROXIES = ['http://user:pass@proxy1.com:8080', 'http://user:pass@proxy2.com:8080'];
-// const getProxyAgent = () => new HttpsProxyAgent(PROXIES[Math.floor(Math.random() * PROXIES.length)]);
-
 // Dynamic User Agents for Anti-Bot Bypass
 const USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -41,14 +37,11 @@ const axiosClient = axios.create({
     httpsAgent
 });
 
-// AUTO-RETRY LOGIC: 20 req/sec पर फ़ेल होने पर स्वचालित रीट्राई
+// AUTO-RETRY LOGIC
 axiosRetry(axiosClient, {
-    retries: 2, // फ़ेल होने पर 2 बार फिर से कोशिश करेगा
-    retryDelay: (retryCount) => {
-        return retryCount * 1000; // पहला रीट्राई 1 सेकंड बाद, दूसरा 2 सेकंड बाद
-    },
+    retries: 2,
+    retryDelay: (retryCount) => retryCount * 1000,
     retryCondition: (error) => {
-        // Network Error या 429/502/503/504 स्टेटस पर ऑटो-रीट्राई
         return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
                (error.response && [429, 500, 502, 503, 504].includes(error.response.status));
     }
@@ -57,12 +50,16 @@ axiosRetry(axiosClient, {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const tradeMap = { '1': 'Halwai (हलवाई)' };
 
+// Health Check Endpoint (For Render & UptimeRobot Ping)
+app.get('/', (req, res) => {
+    res.send("MSME Sync Engine Server is Running Healthy!");
+});
+
 app.post('/api/track', async (req, res) => {
     const appId = req.body.app_id ? req.body.app_id.toString().trim() : '';
     if (!appId) return res.json({ status: 'error', message: 'Invalid Application ID' });
 
     try {
-        // High Speed Micro Delay (10ms - 25ms)
         await sleep(Math.floor(Math.random() * 15) + 10);
 
         // 1. Get Application Status
@@ -98,9 +95,7 @@ app.post('/api/track', async (req, res) => {
                     const tdText = $("td:contains('ट्रेड जिसके हेतु आवेदन किया गया')").next('td').text().trim();
                     if (tdText) rawTrade = tdText;
                 }
-            } catch (e) {
-                // Secondary fallback failure ignored to maintain throughput
-            }
+            } catch (e) {}
         }
 
         const tradeName = tradeMap[rawTrade] || rawTrade || 'NA';
@@ -121,8 +116,11 @@ app.post('/api/track', async (req, res) => {
     }
 });
 
-app.listen(5000, () => {
+// Dynamic Port Assignment for Render Cloud Hosting
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, '0.0.0.0', () => {
     console.log("---------------------------------------------------------");
-    console.log("20 Req/Sec Ultra Engine + Axios Retry Active on Port 5000");
+    console.log(`20 Req/Sec Ultra Engine Active on Port ${PORT}`);
     console.log("---------------------------------------------------------");
 });
